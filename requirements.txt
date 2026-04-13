@@ -1,6 +1,0 @@
-streamlit
-yfinance
-plotly
-google-genai
-pandas
-python-docx
