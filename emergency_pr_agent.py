@@ -1,6 +1,6 @@
 """
-及時公關處理系統 (emergency_pr_agent.py) - 錯誤解碼升級版
-內建 Tenacity 異常穿透機制，用於精準除錯。
+及時公關處理系統 (emergency_pr_agent.py) - 模型精準對焦版
+修復 Google API v1beta 的 404 模型名稱對應問題。
 """
 import streamlit as st
 
@@ -16,7 +16,8 @@ def get_client() -> genai.GenerativeModel:
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-1.5-flash')
+        # 🔑 【核心修復點】：加上 -latest 確保 API 能精準找到最新且存活的模型節點
+        return genai.GenerativeModel('gemini-1.5-flash-latest')
     else:
         raise ValueError("🔒 找不到 API 金鑰！請在 Streamlit 的 Secrets 設定 GEMINI_API_KEY。")
 
@@ -28,9 +29,9 @@ def robust_generate_content(model: genai.GenerativeModel, prompt: str, system_in
         temperature=0.2,
         max_output_tokens=150 
     )
-    # 若此處發生錯誤，tenacity 會接管並重試
     response = model.generate_content(full_prompt, generation_config=config)
-    return response.text, "gemini-1.5-flash"
+    # 更新顯示字串以核對模型版本
+    return response.text, "gemini-1.5-flash-latest"
 
 # ==========================================
 # UI 介面與主邏輯
@@ -38,7 +39,7 @@ def robust_generate_content(model: genai.GenerativeModel, prompt: str, system_in
 st.set_page_config(page_title="危機公關代理人", page_icon="🚨", layout="wide")
 
 st.title("🚨 24H 災防緊急通報與安撫代理人")
-st.markdown("已啟動**錯誤解碼模式**，若發生連線異常將顯示真實原因。")
+st.markdown("已切換至 **`gemini-1.5-flash-latest`** 穩定節點。")
 
 default_report = "你好！我是頭份市中華路跟建國路交叉口這裡的居民！馬路上有怪手在挖水溝，結果突然聽到『嘶嘶』很大聲，然後整條街都是超濃的瓦斯味！你們快點派人來啦，感覺快爆炸了！"
 report_text = st.text_area("民眾緊急訊息：", value=default_report, height=100)
@@ -63,11 +64,10 @@ if st.button("⚡ 啟動 AI 千手觀音應變機制", type="primary", use_conta
                     st.write(pr_response)
                     st.caption(f"🛡️ 引擎: {model_used}")
                 except RetryError as e:
-                    # 【核心除錯邏輯】：剝開 Tenacity 的外殼，抓出最後一次重試時發生的真實錯誤
                     real_error = e.last_attempt.exception()
                     st.error(f"❌ API 拒絕連線 (已重試3次皆失敗)。")
                     st.error(f"🔍 **Google 原廠真實報錯訊息**：\n`{real_error}`")
-                    st.stop() # 發生嚴重錯誤，直接停止後續分身的執行
+                    st.stop()
 
         with col2:
             st.warning("👷‍♂️ **【分身二】工務調度**")
