@@ -1,6 +1,6 @@
 """
-及時公關處理系統 (emergency_pr_agent.py) - 效能解放與原生指令版
-修復 Token 節流閥過緊導致的輸出截斷問題，並導入原生 System Instruction。
+及時公關處理系統 (emergency_pr_agent.py) - 無限制火力全開版
+已徹底拔除 max_output_tokens 節流閥，解放 AI 完整生成能力。
 """
 import streamlit as st
 
@@ -38,17 +38,15 @@ def auto_discover_model() -> str:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def robust_generate_content(model_name: str, prompt: str, system_instruction: str):
-    """具備自動重試與原生系統指令的生成函數"""
-    # 🔑 【核心修復點 1】：使用 Google API 原生的 system_instruction 參數，賦予 AI 真正的角色靈魂
+    """具備自動重試與原生系統指令的生成函數 (已解除字數封印)"""
     model = genai.GenerativeModel(
         model_name=model_name,
         system_instruction=system_instruction
     )
     
-    # 🔑 【核心修復點 2】：放寬 Token 節流閥 (提升至 800)，給予 AI 完整表達的空間
+    # 🔑 【核心修復點】：徹底移除 max_output_tokens 參數，讓 AI 自由發揮
     config = genai.types.GenerationConfig(
-        temperature=0.3, # 稍微提升溫度，讓安撫語氣更自然
-        max_output_tokens=800 
+        temperature=0.3
     )
     
     response = model.generate_content(prompt, generation_config=config)
@@ -80,6 +78,7 @@ if st.button("⚡ 啟動 AI 千手觀音應變機制", type="primary", use_conta
         with col1:
             st.info("👩‍💼 **【分身一】客服公關**")
             with st.spinner("連線生成中..."):
+                # 給予 AI 更明確的任務指示，不再限制字數
                 sys_prompt_1 = "你是天然氣公司客服。請根據報案內容，撰寫一段安撫民眾的訊息，並明確指導他們退到安全處。語氣需專業且安定。"
                 try:
                     pr_response = robust_generate_content(active_model_name, report_text, sys_prompt_1)
