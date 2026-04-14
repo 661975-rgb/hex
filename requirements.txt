@@ -1,7 +1,3 @@
 streamlit
-yfinance
-plotly
-google-genai
-pandas
+google-generativeai
 tenacity
-python-docx
